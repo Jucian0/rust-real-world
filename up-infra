@@ -1,0 +1,11 @@
+echo "Welcome to Up Infra Rust Rest API \n"
+
+echo "Up postgres database \n"
+
+echo $(brew services start postgresql)
+
+echo "Up redis \n \n"
+
+echo $(redis-server /usr/local/etc/redis.conf)
+
+echo "Redis ON"
