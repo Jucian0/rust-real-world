@@ -1,14 +1,61 @@
 use crate::api_error::ApiError;
+use crate::email::{Contact, Email};
+use crate::email_verification_token::{EmailVerificationToken, EmailVerificationTokenMessage};
 use crate::user::{User, UserMessage};
 use actix_session::Session;
 use actix_web::{get, post, web, HttpResponse};
+use chrono::Utc;
+use hex;
+use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
+#[post("/invite")]
+async fn invite(body: web::Json<EmailVerificationTokenMessage>) -> Result<HttpResponse, ApiError> {
+   let body = body.into_inner();
+   let token = EmailVerificationToken::create(body.clone())?;
+   let token_string = hex::encode(token.id);
+
+   Email::new(Contact::new("juciano@outlook.com.br", "Juciano"))
+      .add_recipient(body.email)
+      .set_subject("Confirm your email")
+      .set_html(format!("Your confirmation code is: {}", &token_string))
+      .send()?;
+
+   Ok(HttpResponse::Ok().json(json!({"message": "Verification email sent"})))
+}
+
+#[derive(Deserialize)]
+struct RegistrationMessage {
+   token: String,
+   email: String,
+   password: String,
+}
+
 #[post("/register")]
-async fn register(user: web::Json<UserMessage>) -> Result<HttpResponse, ApiError> {
-   let user = User::create(user.into_inner())?;
-   Ok(HttpResponse::Ok().json(user))
+async fn register(body: web::Json<RegistrationMessage>) -> Result<HttpResponse, ApiError> {
+   let body = body.into_inner();
+   let token_id = hex::decode(body.token).map_err(|e| ApiError::new(403, "Invalid token"))?;
+
+   let token = EmailVerificationToken::find(&token_id).map_err(|e| match e.status_code {
+      404 => ApiError::new(403, "Invalid token"),
+      _ => e,
+   })?;
+
+   if token.email != body.email {
+      return Err(ApiError::new(403, "Invalid token"));
+   }
+
+   if token.expires_at < Utc::now().naive_utc() {
+      return Err(ApiError::new(403, "Token expired"));
+   }
+
+   let user = User::create(UserMessage {
+      email: body.email,
+      password: body.password,
+   })?;
+
+   Ok(HttpResponse::Ok().json(json!({"message": "Successfully registered", "user": user})))
 }
 
 #[post("/sign-in")]
@@ -64,4 +111,5 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
    cfg.service(sign_in);
    cfg.service(sign_out);
    cfg.service(who_am_i);
+   cfg.service(invite);
 }

@@ -14,8 +14,12 @@ use std::env;
 mod api_error;
 mod auth;
 mod db;
+mod email;
+mod email_verification_token;
+mod middlewares;
 mod schema;
 mod user;
+mod utils;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {

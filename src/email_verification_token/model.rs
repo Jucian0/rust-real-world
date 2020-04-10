@@ -12,19 +12,13 @@ pub struct EmailVerificationTokenMessage {
    pub email: String,
 }
 
-#[derive(Deserialize, Clone)]
-pub struct EmailVerificationTokenMessage {
-   pub id: Option<String>,
-   pub email: String,
-}
-
 #[derive(Deserialize, Serialize, Queryable, Insertable)]
 #[table_name = "email_verification_token"]
 pub struct EmailVerificationToken {
    pub id: Vec<u8>,
    pub email: String,
-   pub expires_at: NativeDateTime,
-   pub created_at: NativeDateTime,
+   pub expires_at: NaiveDateTime,
+   pub created_at: NaiveDateTime,
 }
 
 impl EmailVerificationToken {
@@ -38,7 +32,7 @@ impl EmailVerificationToken {
       Ok(token)
    }
 
-   pub fn create(body: EmailVerificationTokenMessage) -> Result<Selft, ApiError> {
+   pub fn create(body: EmailVerificationTokenMessage) -> Result<Self, ApiError> {
       let conn = db::connection()?;
 
       let id = rand::thread_rng().gen::<[u8; 32]>().to_vec();
