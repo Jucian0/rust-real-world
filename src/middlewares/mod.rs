@@ -1,3 +1,3 @@
-pub mod csrf_token;
+pub mod token;
 
-pub use csrf_token::LoggedUser;
+pub use token::LoggedUser;
