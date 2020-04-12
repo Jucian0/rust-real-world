@@ -11,8 +11,6 @@ struct Claims {
    exp: i64,
 }
 
-// We're using a struct so we can implement a conversion from
-// Claims to SlimUser, useful in the decode function.
 pub struct SlimUser {
    pub email: String,
    pub name: String,

@@ -17,7 +17,6 @@ mod auth;
 mod db;
 mod email;
 mod email_verification_token;
-mod middlewares;
 mod schema;
 mod user;
 mod utils;
