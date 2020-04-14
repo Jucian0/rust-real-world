@@ -4,7 +4,6 @@ extern crate log;
 extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
-extern crate csrf_token;
 
 use actix_redis::RedisSession;
 use actix_web::{App, HttpServer};
