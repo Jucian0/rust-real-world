@@ -9,6 +9,7 @@ use std::fmt;
 pub struct DataError {
     pub status_code: u16,
     pub message: String,
+    pub path: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -18,12 +19,13 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    pub fn new<T: Into<String>>(status_code: u16, message: T) -> ApiError {
+    pub fn new<T: Into<String>>(status_code: u16, message: T, path: String) -> ApiError {
         ApiError {
             status_code,
             data: DataError {
                 status_code,
                 message: message.into(),
+                path,
             },
         }
     }
@@ -38,9 +40,21 @@ impl fmt::Display for ApiError {
 impl From<DieselError> for ApiError {
     fn from(error: DieselError) -> ApiError {
         match error {
-            DieselError::DatabaseError(_, err) => ApiError::new(409, err.message().to_string()),
-            DieselError::NotFound => ApiError::new(404, "Record not found".to_string()),
-            err => ApiError::new(500, format!("Diesel error: {}", err)),
+            DieselError::DatabaseError(_, err) => ApiError::new(
+                409,
+                &err.message().to_string(),
+                match err.constraint_name() {
+                    None => match err.table_name() {
+                        None => "generic".to_string(),
+                        Some(error) => String::from(error),
+                    },
+                    Some(error) => String::from(error),
+                },
+            ),
+            DieselError::NotFound => {
+                ApiError::new(404, "Record not found".to_string(), "generic".to_string())
+            }
+            err => ApiError::new(500, format!("Diesel error: {}", err), "generic".to_string()),
         }
     }
 }
@@ -63,12 +77,13 @@ impl ResponseError for ApiError {
         HttpResponse::build(status_code).json::<DataError>(DataError {
             message,
             status_code: status_code.into(),
+            path: self.data.path.clone(),
         })
     }
 }
 
 impl From<ActixError> for ApiError {
     fn from(error: ActixError) -> ApiError {
-        ApiError::new(500, error.to_string())
+        ApiError::new(500, error.to_string(), "generic".to_string())
     }
 }
