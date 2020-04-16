@@ -28,8 +28,8 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let config = Config {};
 
-    let redis_port = config.get_config_with_key("REDIS_PORT"); //env::var("REDIS_PORT").expect("Redis port not set");
-    let redis_host = config.get_config_with_key("REDIS_HOST"); //env::var("REDIS_HOST").expect("Redis host not set");
+    let redis_port = config.get_config_with_key("REDIS_PORT");
+    let redis_host = config.get_config_with_key("REDIS_HOST");
 
     let mut server = HttpServer::new(move || {
         App::new()
@@ -44,8 +44,8 @@ async fn main() -> std::io::Result<()> {
     server = match listenfd.take_tcp_listener(0)? {
         Some(listener) => server.listen(listener)?,
         None => {
-            let host = config.get_config_with_key("HOST"); //env::var("HOST").expect("Host not set");
-            let port = config.get_config_with_key("PORT"); //env::var("PORT").expect("Port not set");
+            let host = config.get_config_with_key("HOST");
+            let port = config.get_config_with_key("PORT");
             server.bind(format!("{}:{}", host, port))?
         }
     };

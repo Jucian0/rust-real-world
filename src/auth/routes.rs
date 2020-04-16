@@ -1,10 +1,11 @@
 use crate::api_error::ApiError;
-use crate::auth::create_token;
+use crate::auth::{create_token, decode_token};
 use crate::user::{User, UserMessage};
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
+
 #[derive(Deserialize)]
 struct RegistrationMessage {
     email: String,
@@ -81,21 +82,38 @@ async fn sign_out() -> Result<HttpResponse, ApiError> {
 }
 
 #[get("/who-am-i")]
-async fn who_am_i() -> Result<HttpResponse, ApiError> {
-    // let id: Option<Uuid> = session.get("user_id")?;
+async fn who_am_i(req: HttpRequest) -> Result<HttpResponse, ApiError> {
+    let auth = req.headers().get("Authorization");
 
-    // if let Some(id) = id {
-    //     let user = User::find(id)?;
-    //     Ok(HttpResponse::Ok().json(user))
-    // } else {
-    //     Err(ApiError::new(
-    //         401,
-    //         "Unauthorized".to_string(),
-    //         "user_aith_key".to_string(),
-    //     ))
-    // }
+    if auth.is_none() {
+        return Err(ApiError::new(
+            401,
+            "Credentials not valid!".to_string(),
+            "user_auth_key".to_string(),
+        ));
+    }
 
-    Ok(HttpResponse::Ok().json({}))
+    let split: Vec<&str> = auth.unwrap().to_str().unwrap().split("Bearer").collect();
+    let token = split[1].trim();
+
+    let decoded = match decode_token(token) {
+        Ok(_token) => _token.email,
+        Err(_) => "".to_string(),
+    };
+
+    if decoded != "".to_string() {
+        let user = User::find_by_email(decoded.to_string())?;
+
+        Ok(HttpResponse::Ok().json(user))
+    } else {
+        return Err(ApiError::new(
+            401,
+            "Credentials not valid!".to_string(),
+            "user_auth_key".to_string(),
+        ));
+    }
+
+    // Ok(HttpResponse::Ok().json(user))
 }
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
