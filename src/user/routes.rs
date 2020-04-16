@@ -1,17 +1,32 @@
 use crate::api_error::ApiError;
-use crate::{
-    middlewares::AuthorizationService,
-    user::{User, UserMessage},
-};
-use actix_web::{delete, get, post, put, web, HttpResponse};
+use crate::auth::decode_token;
+use crate::user::{User, UserMessage};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use serde_json::json;
 use uuid::Uuid;
 
 #[get("/users")]
-async fn find_all(auth: AuthorizationService) -> Result<HttpResponse, ApiError> {
+async fn find_all(req: HttpRequest) -> Result<HttpResponse, ApiError> {
     let users = User::find_all()?;
 
-    Ok(HttpResponse::Ok().json(users))
+    let auth = req.headers().get("Authorization");
+    let split: Vec<&str> = auth.unwrap().to_str().unwrap().split("Bearer").collect();
+    let token = split[1].trim();
+
+    let decoded = match decode_token(token) {
+        Ok(_) => true,
+        Err(_) => false,
+    };
+
+    if decoded {
+        Ok(HttpResponse::Ok().json(users))
+    } else {
+        return Err(ApiError::new(
+            401,
+            "Credentials not valid!".to_string(),
+            "user_auth_key".to_string(),
+        ));
+    }
 }
 
 #[get("/users/{id}")]
