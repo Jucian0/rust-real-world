@@ -1,11 +1,14 @@
 use crate::api_error::ApiError;
-use crate::user::{User, UserMessage};
+use crate::{
+    middlewares::AuthorizationService,
+    user::{User, UserMessage},
+};
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use serde_json::json;
 use uuid::Uuid;
 
 #[get("/users")]
-async fn find_all() -> Result<HttpResponse, ApiError> {
+async fn find_all(auth: AuthorizationService) -> Result<HttpResponse, ApiError> {
     let users = User::find_all()?;
 
     Ok(HttpResponse::Ok().json(users))

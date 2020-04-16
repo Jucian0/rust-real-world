@@ -1,6 +1,6 @@
 use crate::api_error::ApiError;
+use crate::auth::create_token;
 use crate::user::{User, UserMessage};
-use crate::utils::create_token;
 use actix_session::Session;
 use actix_web::{get, post, web, HttpResponse};
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ struct RegistrationMessage {
 }
 #[derive(Serialize, Deserialize)]
 struct PayloadAuth {
-    token: String,
+    AUTHENTICTION: String,
 }
 
 #[post("/register")]
@@ -51,9 +51,19 @@ async fn sign_in(
             Err(_) => "".to_string(),
         };
 
-        let response = HttpResponse::Ok().header("AUTHENTICTION", token).json(user);
+        if token != "".to_string() {
+            let response = HttpResponse::Ok().json::<PayloadAuth>(PayloadAuth {
+                AUTHENTICTION: token,
+            });
 
-        Ok(response)
+            Ok(response)
+        } else {
+            Err(ApiError::new(
+                401,
+                "Credentials not valid!".to_string(),
+                "user_auth_key".to_string(),
+            ))
+        }
     } else {
         Err(ApiError::new(
             401,

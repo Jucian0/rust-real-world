@@ -5,21 +5,19 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
+use crate::config::{Config, IConfig};
 use actix_redis::RedisSession;
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use listenfd::ListenFd;
-use std::env;
 
 mod api_error;
 mod auth;
+mod config;
 mod db;
-mod email;
-mod email_verification_token;
+mod middlewares;
 mod schema;
 mod user;
-mod utils;
-
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -28,9 +26,10 @@ async fn main() -> std::io::Result<()> {
     db::init();
 
     let mut listenfd = ListenFd::from_env();
+    let config = Config {};
 
-    let redis_port = env::var("REDIS_PORT").expect("Redis port not set");
-    let redis_host = env::var("REDIS_HOST").expect("Redis host not set");
+    let redis_port = config.get_config_with_key("REDIS_PORT"); //env::var("REDIS_PORT").expect("Redis port not set");
+    let redis_host = config.get_config_with_key("REDIS_HOST"); //env::var("REDIS_HOST").expect("Redis host not set");
 
     let mut server = HttpServer::new(move || {
         App::new()
@@ -45,8 +44,8 @@ async fn main() -> std::io::Result<()> {
     server = match listenfd.take_tcp_listener(0)? {
         Some(listener) => server.listen(listener)?,
         None => {
-            let host = env::var("HOST").expect("Host not set");
-            let port = env::var("PORT").expect("Port not set");
+            let host = config.get_config_with_key("HOST"); //env::var("HOST").expect("Host not set");
+            let port = config.get_config_with_key("PORT"); //env::var("PORT").expect("Port not set");
             server.bind(format!("{}:{}", host, port))?
         }
     };
